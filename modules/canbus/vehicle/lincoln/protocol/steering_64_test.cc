@@ -14,22 +14,29 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include "modules/planning/planner_factory.h"
+#include "modules/canbus/vehicle/lincoln/protocol/steering_64.h"
 
-#include "modules/planning/planner/rtk_replay_planner.h"
+#include "gtest/gtest.h"
 
 namespace apollo {
-namespace planning {
+namespace canbus {
+namespace lincoln {
 
-std::unique_ptr<Planner> PlannerFactory::CreateInstance(
-    const PlannerType& planner_type) {
-  switch (planner_type) {
-    case PlannerType::RTK_PLANNER:
-      return std::unique_ptr<Planner>(new RTKReplayPlanner());
-    default:
-      return nullptr;
-  }
+TEST(Steering64Test, General) {
+  uint8_t data[8] = {0x67, 0x62, 0x63, 0x64, 0x51, 0x52, 0x53, 0x54};
+  Steering64 steering;
+  EXPECT_EQ(steering.GetPeriod(), 20 * 1000);
+  steering.UpdateData(data);
+  EXPECT_EQ(data[0], 0b00000000);
+  EXPECT_EQ(data[1], 0b00000000);
+  EXPECT_EQ(data[2], 0b01100000);
+  EXPECT_EQ(data[3], 0b00000000);
+  EXPECT_EQ(data[4], 0b01010001);
+  EXPECT_EQ(data[5], 0b01010010);
+  EXPECT_EQ(data[6], 0b01010011);
+  EXPECT_EQ(data[7], 0b00000000);
 }
 
-}  // namespace planning
+}  // namespace lincoln
+}  // namespace canbus
 }  // namespace apollo
