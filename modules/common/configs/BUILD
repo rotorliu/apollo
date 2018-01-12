@@ -10,6 +10,9 @@ cc_library(
     hdrs = [
         "config_gflags.h",
     ],
+    data = [
+        "//modules/common/data:global_flagfile",
+    ],
     deps = [
         "//external:gflags",
     ],
@@ -32,6 +35,18 @@ cc_library(
         "//modules/common/configs/proto:vehicle_config_proto",
         "//modules/common/util",
         "@glog//:glog",
+    ],
+)
+
+cc_test(
+    name = "vehicle_config_helper_test",
+    size = "small",
+    srcs = [
+        "vehicle_config_helper_test.cc",
+    ],
+    deps = [
+        "vehicle_config_helper",
+        "@gtest//:main",
     ],
 )
 

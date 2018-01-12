@@ -2,8 +2,8 @@ syntax = "proto2";
 
 package apollo.dreamview;
 
-import "modules/common/monitor/proto/monitor.proto";
-import "modules/decision/proto/decision.proto";
+import "modules/common/monitor_log/proto/monitor_log.proto";
+import "modules/planning/proto/decision.proto";
 import "modules/planning/proto/planning.proto";
 
 // Next-id: 4
@@ -28,9 +28,9 @@ message Decision {
     YIELD = 3; // Go after the object
     OVERTAKE = 4; // Go before the object
     FOLLOW = 5; // Follow the object in the same lane
-    SIDEPASS = 6; // Pass the object in neighbouring lane
+    SIDEPASS = 6; // Pass the object in neighboring lane
   }
-  required Type type = 1 [default = IGNORE];
+  optional Type type = 1 [default = IGNORE];
 
   // Shape Info
   // Can be used for corners of nudge region
@@ -92,8 +92,8 @@ message Object {
   optional double speed_heading = 30;
 
   // Signal Info
-  // For objects with signals set and current signal such as Traffic Light and
-  // Stop Sign.
+  // For objects with signals set and current signal such as Traffic Light,
+  // Stop Sign, and Vehicle Signal.
   repeated string signal_set = 17;
   optional string current_signal = 18;
 
@@ -103,9 +103,9 @@ message Object {
   // Decision Info
   repeated Decision decision = 20;
   // ADC decision results
-  optional .apollo.decision.DecisionResult adc_decision_result = 29;
+  optional .apollo.planning.DecisionResult adc_decision_result = 29;
   // ADC planning trajectory
-  optional .apollo.planning.ADCTrajectory adc_trajectory = 31;
+  optional .apollo.planning.ADCTrajectory adc_trajectory = 31 [deprecated = true];
 
   // Chassis Info
   // For ADC
@@ -116,6 +116,10 @@ message Object {
     DISENGAGE_NONE = 0;
     DISENGAGE_UNKNOWN = 1;
     DISENGAGE_MANUAL = 2;
+    DISENGAGE_EMERGENCY = 3;
+    DISENGAGE_AUTO_STEER_ONLY = 4;
+    DISENGAGE_AUTO_SPEED_ONLY = 5;
+    DISENGAGE_CHASSIS_ERROR = 6;
   };
 
   optional DisengageType disengage_type = 24;
@@ -124,7 +128,7 @@ message Object {
     UNKNOWN = 0;
     UNKNOWN_MOVABLE = 1;
     UNKNOWN_UNMOVABLE = 2;
-    PEDESTRIAN = 3;  // pedestrian, usually determined by moving behaviour.
+    PEDESTRIAN = 3;  // pedestrian, usually determined by moving behavior.
     BICYCLE = 4;  // bike, motor bike.
     VEHICLE = 5;  // passenger car or truck.
     VIRTUAL = 6; // virtual object created by decision module.
@@ -132,34 +136,35 @@ message Object {
 
   optional Type type = 25;  // obstacle type
   repeated Prediction prediction = 26;
+
+  // perception confidence level. Range: [0,1]
+  optional double confidence = 27 [default = 1];
 }
 
-message DelayItem {
-    optional uint32 delay = 1;
-    optional uint32 last_delay = 2;
+message DelaysInMs {
+  optional double chassis = 1;
+  optional double localization = 3;
+  optional double perception_obstacle = 4;
+  optional double planning = 5;
+  optional double prediction= 7;
+  optional double traffic_light = 8;
 }
 
-message Delay {
-    optional DelayItem adc_status = 1;
-    optional DelayItem decision = 2;
-    optional DelayItem localization = 3;
-    optional DelayItem localization_pcl = 4;
-    optional DelayItem perception_obstacle = 5;
-    optional DelayItem perception_radar = 6;
-    optional DelayItem planning_trajectory = 7;
-    optional DelayItem prediction= 8;
-    optional DelayItem traffic_light = 10;
+message RoutePath {
+  repeated PolygonPoint point = 1;
 }
 
-// Next-id: 2
-message Debug {
-    optional string novatel_position_type = 1;
+message Latency { // ms
+  optional double planning = 1;
 }
 
-// Next-id: 30
+// Next-id: 17
 message SimulationWorld {
   // Time
   optional double timestamp_sec = 1;
+
+  // Sequence number
+  optional uint32 sequence_num = 2;
 
   // Objects in the world and the associated predictions/decisions
   repeated Object object = 3;
@@ -170,29 +175,27 @@ message SimulationWorld {
   // Traffic light status
   optional Object traffic_signal = 6;
 
-  // Routing path
-  repeated PolygonPoint route = 7;
+  // Routing paths
+  repeated RoutePath route_path = 7;
+  // Timestamp of latest routing
+  optional double routing_time = 8;
 
   // Planned trajectory
-  repeated Object planning_trajectory = 8;
+  repeated Object planning_trajectory = 9;
 
   // Main stop
-  optional Object main_stop = 9;
+  optional Object main_stop = 10;
 
   // Speed limit
-  optional double speed_limit = 10;
+  optional double speed_limit = 11;
 
-  // Map Hashcode
-  optional string map_md5 = 11;
+  optional DelaysInMs delay = 12;
 
-  optional Delay delay = 17;
+  optional apollo.common.monitor.MonitorMessage monitor = 13;
 
-  // Relative time w.r.t. the begin time of rosbag
-  optional double relative_time_sec = 18;
+  // Module latency
+  optional Latency latency = 15;
 
-  optional string decision_task_name = 19;
-
-  optional Debug debug_log = 26;
-
-  optional .apollo.common.monitor.MonitorMessage monitor = 29;
+  // Engage advice from planning
+  optional string engage_advice = 16;
 }

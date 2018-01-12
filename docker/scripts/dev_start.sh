@@ -16,12 +16,58 @@
 # limitations under the License.
 ###############################################################################
 
+INCHINA="no"
 VERSION=""
 ARCH=$(uname -m)
-VERSION_X86_64="dev-x86_64-20170707_1129"
-VERSION_AARCH64="dev-aarch64-20170712_1533"
-if [[ $# == 1 ]];then
-    VERSION=$1
+VERSION_X86_64="dev-x86_64-20180103_1300"
+VERSION_AARCH64="dev-aarch64-20170927_1111"
+VERSION_OPT=""
+
+function show_usage()
+{
+cat <<EOF
+Usage: $(basename $0) [options] ...
+OPTIONS:
+    -C  pull docker image from China mirror
+    -h, --help   display this help and exit
+    -image <version>    specify which version of a docker image to pull
+EOF
+exit 0
+}
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+    -C|--docker-cn-mirror)
+        INCHINA="yes"
+        ;;
+    -image)
+        VAR=$1
+        [ -z $VERSION_OPT ] || echo -e "\033[093mWarning\033[0m: mixed option -image with $VERSION_OPT, only the last one will take effect.\n "
+        shift
+        VERSION_OPT=$1
+        [ -z ${VERSION_OPT// /} ] && echo -e "Missing parameter for $VAR" && exit 2
+        [[ $VERSION_OPT =~ ^-.* ]] && echo -e "Missing parameter for $VAR" && exit 2
+        ;;
+    dev-*) # keep backward compatibility, should be removed from further version.
+        [ -z $VERSION_OPT ] || echo -e "\033[093mWarning\033[0m: mixed option $1 with -image, only the last one will take effect.\n "
+        VERSION_OPT=$1
+        echo -e "\033[93mWarning\033[0m: You are using an old style command line option which may be removed from"
+        echo -e "further versoin, please use -image <version> instead.\n"
+        ;;
+    -h|--help)
+        show_usage
+        ;;
+    *)
+        echo -e "\033[93mWarning\033[0m: Unknown option: $1"
+        exit 2
+        ;;
+    esac
+    shift
+done
+
+if [ ! -z "$VERSION_OPT" ]; then
+    VERSION=$VERSION_OPT
 elif [ ${ARCH} == "x86_64" ]; then
     VERSION=${VERSION_X86_64}
 elif [ ${ARCH} == "aarch64" ]; then
@@ -35,39 +81,30 @@ if [ -z "${DOCKER_REPO}" ]; then
     DOCKER_REPO=apolloauto/apollo
 fi
 
+if [ "$INCHINA" == "yes" ]; then
+    DOCKER_REPO=registry.docker-cn.com/apolloauto/apollo
+fi
+
 IMG=${DOCKER_REPO}:$VERSION
-LOCAL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+APOLLO_ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
 
-if [ ! -e "${LOCAL_DIR}/data/log" ]; then
-    mkdir -p "${LOCAL_DIR}/data/log"
-fi
-if [ ! -e "${LOCAL_DIR}/data/bag" ]; then
-    mkdir -p "${LOCAL_DIR}/data/bag"
-fi
-if [ ! -e "${LOCAL_DIR}/data/core" ]; then
-    mkdir -p "${LOCAL_DIR}/data/core"
+if [ ! -e /apollo ]; then
+    sudo ln -sf ${APOLLO_ROOT_DIR} /apollo
 fi
 
-source ${LOCAL_DIR}/scripts/apollo_base.sh
+echo "/apollo/data/core/core_%e.%p" | sudo tee /proc/sys/kernel/core_pattern >/dev/null
 
-function find_device() {
-    # ${1} = device pattern
-    local device_list=$(find /dev -name "${1}")
-    if [ -z "${device_list}" ]; then
-        warning "Failed to find device with pattern \"${1}\" ..."
-    else
-        local devices=""
-        for device in $(find /dev -name "${1}"); do
-            ok "Found device: ${device}."
-            devices="${devices} --device ${device}:${device}"
-        done
-        echo "${devices}"
-    fi
-}
+source ${APOLLO_ROOT_DIR}/scripts/apollo_base.sh
 
 function main(){
+
+    info "Start pulling docker image $IMG ..."
     docker pull $IMG
-    
+    if [ $? -ne 0 ];then
+        error "Failed to pull docker image."
+        exit 1
+    fi
+
     docker ps -a --format "{{.Names}}" | grep 'apollo_dev' 1>/dev/null
     if [ $? == 0 ]; then
         docker stop apollo_dev 1>/dev/null
@@ -80,21 +117,10 @@ function main(){
         display="${DISPLAY}"
     fi
 
+    setup_device
 
-    # setup CAN device
-    if [ ! -e /dev/can0 ]; then
-        sudo mknod --mode=a+rw /dev/can0 c 52 0
-    fi
-    # enable coredump
-    echo "${LOCAL_DIR}/data/core/core_%e.%p" | sudo tee /proc/sys/kernel/core_pattern
+    local devices=" -v /dev:/dev"
 
-
-    local devices=""
-    devices="${devices} $(find_device ttyUSB*)"
-    devices="${devices} $(find_device ttyS*)"
-    devices="${devices} $(find_device can*)"
-    devices="${devices} $(find_device ram*)"
-    devices="${devices} $(find_device loop*)"
     USER_ID=$(id -u)
     GRP=$(id -g -n)
     GRP_ID=$(id -g)
@@ -106,8 +132,11 @@ function main(){
     if [ ! -d "$HOME/.cache" ];then
         mkdir "$HOME/.cache"
     fi
+
+    info "Starting docker container \"apollo_dev\" ..."
     docker run -it \
         -d \
+        --privileged \
         --name apollo_dev \
         -e DISPLAY=$display \
         -e DOCKER_USER=$USER \
@@ -115,22 +144,35 @@ function main(){
         -e DOCKER_USER_ID=$USER_ID \
         -e DOCKER_GRP=$GRP \
         -e DOCKER_GRP_ID=$GRP_ID \
+        -e DOCKER_IMG=$IMG \
         -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-        -v $LOCAL_DIR:/apollo \
+        -v $APOLLO_ROOT_DIR:/apollo \
         -v /media:/media \
         -v $HOME/.cache:${DOCKER_HOME}/.cache \
         -v /etc/localtime:/etc/localtime:ro \
+        -v /usr/src:/usr/src \
+        -v /lib/modules:/lib/modules \
         --net host \
         -w /apollo \
         ${devices} \
         --add-host in_dev_docker:127.0.0.1 \
         --add-host ${LOCAL_HOST}:127.0.0.1 \
         --hostname in_dev_docker \
-        --shm-size 512M \
-        $IMG
+        --shm-size 2G \
+        $IMG \
+        /bin/bash
+
+    if [ $? -ne 0 ];then
+        error "Failed to start docker container \"apollo_dev\" based on image: $IMG"
+        exit 1
+    fi
+
     if [ "${USER}" != "root" ]; then
         docker exec apollo_dev bash -c '/apollo/scripts/docker_adduser.sh'
     fi
+
+    ok "Finished setting up Apollo docker environment. Now you can enter with: \nbash docker/scripts/dev_into.sh"
+    ok "Enjoy!"
 }
 
 main

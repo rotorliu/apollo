@@ -20,21 +20,31 @@
 
 #include "modules/common/log.h"
 #include "modules/common/time/time.h"
+#include "modules/control/common/control_gflags.h"
 #include "modules/control/controller/lat_controller.h"
 #include "modules/control/controller/lon_controller.h"
+#include "modules/control/controller/mpc_controller.h"
 
 namespace apollo {
 namespace control {
 
+using apollo::common::ErrorCode;
+using apollo::common::Status;
 using apollo::common::time::Clock;
 
 void ControllerAgent::RegisterControllers() {
-  controller_factory_.Register(
-      ControlConf::LAT_CONTROLLER,
-      []() -> Controller * { return new LatController(); });
-  controller_factory_.Register(
-      ControlConf::LON_CONTROLLER,
-      []() -> Controller * { return new LonController(); });
+  if (!FLAGS_use_mpc) {
+    controller_factory_.Register(
+        ControlConf::LAT_CONTROLLER,
+        []() -> Controller * { return new LatController(); });
+    controller_factory_.Register(
+        ControlConf::LON_CONTROLLER,
+        []() -> Controller * { return new LonController(); });
+  } else {
+    controller_factory_.Register(
+        ControlConf::MPC_CONTROLLER,
+        []() -> Controller * { return new MPCController(); });
+  }
 }
 
 Status ControllerAgent::InitializeConf(const ControlConf *control_conf) {
@@ -43,7 +53,6 @@ Status ControllerAgent::InitializeConf(const ControlConf *control_conf) {
     return Status(ErrorCode::CONTROL_INIT_ERROR, "Failed to load config");
   }
   control_conf_ = control_conf;
-  AINFO << control_conf_->DebugString();
   for (auto controller_type : control_conf_->active_controllers()) {
     auto controller = controller_factory_.CreateObject(
         static_cast<ControlConf::ControllerType>(controller_type));
@@ -78,19 +87,18 @@ Status ControllerAgent::Init(const ControlConf *control_conf) {
 }
 
 Status ControllerAgent::ComputeControlCommand(
-    const ::apollo::localization::LocalizationEstimate *localization,
-    const ::apollo::canbus::Chassis *chassis,
-    const ::apollo::planning::ADCTrajectory *trajectory,
-    ::apollo::control::ControlCommand *cmd) {
+    const localization::LocalizationEstimate *localization,
+    const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
+    control::ControlCommand *cmd) {
   for (auto &controller : controller_list_) {
     ADEBUG << "controller:" << controller->Name() << " processing ...";
-    double start_timestamp = apollo::common::time::ToSecond(Clock::Now());
+    double start_timestamp = Clock::NowInSeconds();
     controller->ComputeControlCommand(localization, chassis, trajectory, cmd);
-    double end_timestamp = apollo::common::time::ToSecond(Clock::Now());
+    double end_timestamp = Clock::NowInSeconds();
     const double time_diff_ms = (end_timestamp - start_timestamp) * 1000;
 
-    AINFO << "controller: " << controller->Name()
-          << " calculation time is: " << time_diff_ms << " ms.";
+    ADEBUG << "controller: " << controller->Name()
+           << " calculation time is: " << time_diff_ms << " ms.";
     cmd->mutable_latency_stats()->add_controller_time_ms(time_diff_ms);
   }
   return Status::OK();

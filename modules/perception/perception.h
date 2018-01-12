@@ -21,12 +21,14 @@
 #ifndef MODEULES_PERCEPTION_PERCEPTION_H_
 #define MODEULES_PERCEPTION_PERCEPTION_H_
 
+#include <memory>
 #include <string>
 
 #include "modules/common/apollo_app.h"
 #include "modules/common/macro.h"
+#include "modules/perception/onboard/dag_streaming.h"
 #include "ros/include/ros/ros.h"
-
+#include "sensor_msgs/PointCloud2.h"
 /**
  * @namespace apollo::perception
  * @brief apollo::perception
@@ -34,12 +36,16 @@
 namespace apollo {
 namespace perception {
 
-class Perception : public apollo::common::ApolloApp {
+class Perception : public common::ApolloApp {
  public:
   std::string Name() const override;
-  apollo::common::Status Init() override;
-  apollo::common::Status Start() override;
+  common::Status Init() override;
+  common::Status Start() override;
   void Stop() override;
+
+ private:
+  DAGStreaming dag_streaming_;
+  void RegistAllOnboardClass();
 };
 
 }  // namespace perception

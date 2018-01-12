@@ -17,6 +17,7 @@
 #include "modules/common/adapters/adapter.h"
 
 #include <string>
+#include <cmath>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "modules/common/adapters/adapter_gflags.h"
@@ -117,7 +118,7 @@ TEST(AdapterTest, Callback) {
 
   // Set the callback to act as a counter of messages.
   int count = 0;
-  adapter.SetCallback([&count](int x) { count += x; });
+  adapter.AddCallback([&count](int x) { count += x; });
 
   adapter.OnReceive(11);
   adapter.OnReceive(41);

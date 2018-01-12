@@ -24,9 +24,6 @@
 #include "modules/common/util/file.h"
 #include "modules/control/proto/control_cmd.pb.h"
 
-DEFINE_string(canbus_test_file, "modules/canbus/testdata/canbus_test.pb.txt",
-              "canbus tester input test file, in ControlCommand pb format.");
-
 int main(int32_t argc, char **argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -38,9 +35,9 @@ int main(int32_t argc, char **argv) {
   ros::Publisher pub =
       nh.advertise<std_msgs::String>(FLAGS_control_command_topic, 100);
 
-  ::apollo::control::ControlCommand control_cmd;
-  if (!::apollo::common::util::GetProtoFromFile(FLAGS_canbus_test_file,
-                                                &control_cmd)) {
+  apollo::control::ControlCommand control_cmd;
+  if (!apollo::common::util::GetProtoFromFile(FLAGS_canbus_test_file,
+                                              &control_cmd)) {
     AERROR << "failed to load file: " << FLAGS_canbus_test_file;
     return -1;
   }

@@ -23,6 +23,7 @@ message ChassisDetail {
   optional Light light = 13;                // Light
   optional Battery battery = 14;            // Battery info
   optional CheckResponseSignal check_response = 15;
+  optional License license = 16;            // License info
 }
 
 // CheckResponseSignal
@@ -445,12 +446,7 @@ message BasicInfo {
     START = 3;
     INVALID = 4;
   }
-  enum GpsQuality {
-    FIX_NO = 0;
-    FIX_2D = 1;
-    FIX_3D = 2;
-    FIX_INVALID = 3;
-  }
+  
   optional bool is_auto_mode = 1;
   optional Type power_state = 2;
   optional bool is_air_bag_deployed = 3;
@@ -499,4 +495,8 @@ message BasicInfo {
   optional GpsQuality quality = 37;
   optional int32 num_satellites = 38;
   optional double gps_speed = 39;
+}
+
+message License {
+  optional string vin = 1;
 }

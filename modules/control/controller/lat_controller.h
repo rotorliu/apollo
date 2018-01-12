@@ -26,13 +26,16 @@
 #include <memory>
 #include <string>
 
+#include "Eigen/Core"
+
 #include "modules/common/configs/proto/vehicle_config.pb.h"
+
+#include "modules/common/filters/digital_filter.h"
+#include "modules/common/filters/digital_filter_coefficients.h"
+#include "modules/common/filters/mean_filter.h"
 #include "modules/control/common/interpolation_1d.h"
 #include "modules/control/common/trajectory_analyzer.h"
 #include "modules/control/controller/controller.h"
-#include "modules/control/filters/digital_filter.h"
-#include "modules/control/filters/digital_filter_coefficients.h"
-#include "modules/control/filters/mean_filter.h"
 
 /**
  * @namespace apollo::control
@@ -65,7 +68,7 @@ class LatController : public Controller {
    * @param control_conf control configurations
    * @return Status initialization status
    */
-  Status Init(const ControlConf *control_conf) override;
+  common::Status Init(const ControlConf *control_conf) override;
 
   /**
    * @brief compute steering target based on current vehicle status
@@ -76,7 +79,7 @@ class LatController : public Controller {
    * @param cmd control command
    * @return Status computation status
    */
-  Status ComputeControlCommand(
+  common::Status ComputeControlCommand(
       const localization::LocalizationEstimate *localization,
       const canbus::Chassis *chassis, const planning::ADCTrajectory *trajectory,
       ControlCommand *cmd) override;
@@ -85,7 +88,7 @@ class LatController : public Controller {
    * @brief reset Lateral Controller
    * @return Status reset status
    */
-  Status Reset() override;
+  common::Status Reset() override;
 
   /**
    * @brief stop Lateral controller
@@ -108,13 +111,13 @@ class LatController : public Controller {
   double ComputeFeedForward(double ref_curvature) const;
 
   double GetLateralError(
-      const Eigen::Vector2d &point,
+      const common::math::Vec2d &point,
       apollo::common::TrajectoryPoint *trajectory_point) const;
 
   void ComputeLateralErrors(const double x, const double y, const double theta,
                             const double linear_v, const double angular_v,
                             const TrajectoryAnalyzer &trajectory_analyzer,
-                            SimpleLateralDebug *debug) const;
+                            SimpleLateralDebug *debug);
   bool LoadControlConf(const ControlConf *control_conf);
   void InitializeFilters(const ControlConf *control_conf);
   void LoadLatGainScheduler(const LatControllerConf &lat_controller_conf);
@@ -124,11 +127,8 @@ class LatController : public Controller {
 
   void CloseLogFile();
 
-  // a proxy to access vehicle movement state
-  ::apollo::common::vehicle_state::VehicleState vehicle_state_;
-
   // vehicle parameter
-  ::apollo::common::config::VehicleParam vehicle_param_;
+  common::VehicleParam vehicle_param_;
 
   // a proxy to analyze the planning trajectory
   TrajectoryAnalyzer trajectory_analyzer_;
@@ -213,14 +213,15 @@ class LatController : public Controller {
   // parameters for lqr solver; threshold for computation
   double lqr_eps_ = 0.0;
 
-  DigitalFilter digital_filter_;
+  common::DigitalFilter digital_filter_;
 
   std::unique_ptr<Interpolation1D> lat_err_interpolation_;
 
   std::unique_ptr<Interpolation1D> heading_err_interpolation_;
 
   // MeanFilter heading_rate_filter_;
-  MeanFilter lateral_error_filter_;
+  common::MeanFilter lateral_error_filter_;
+  common::MeanFilter heading_error_filter_;
 
   // for logging purpose
   std::ofstream steer_log_file_;

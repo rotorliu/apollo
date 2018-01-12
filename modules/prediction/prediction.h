@@ -23,10 +23,13 @@
 
 #include <string>
 
-#include "ros/include/ros/ros.h"
-
-#include "modules/common/apollo_app.h"
+#include "modules/common/adapters/proto/adapter_config.pb.h"
+#include "modules/common/proto/pnc_point.pb.h"
+#include "modules/localization/proto/localization.pb.h"
 #include "modules/perception/proto/perception_obstacle.pb.h"
+#include "modules/planning/proto/planning.pb.h"
+#include "modules/prediction/prediction_interface.h"
+#include "modules/prediction/proto/prediction_conf.pb.h"
 
 /**
  * @namespace apollo::prediction
@@ -35,18 +38,57 @@
 namespace apollo {
 namespace prediction {
 
-class Prediction : public apollo::common::ApolloApp {
+class Prediction : public PredictionInterface {
  public:
+  /**
+   * @brief Destructor
+   */
   ~Prediction() = default;
 
+  /**
+   * @brief Get name of the node
+   * @return Name of the node
+   */
   std::string Name() const override;
+
+  /**
+   * @brief Initialize the node
+   * @return Status of the initialization
+   */
   common::Status Init() override;
+
+  /**
+   * @brief Start the node
+   * @return Status of the starting process
+   */
   common::Status Start() override;
+
+  /**
+   * @brief Stop the node
+   */
   void Stop() override;
 
+  /**
+   * @brief Data callback upon receiving a perception obstacle message.
+   * @param perception_obstacles received message.
+   */
+  void RunOnce(
+      const perception::PerceptionObstacles &perception_obstacles) override;
+
  private:
-  void OnPerception(
-      const perception::PerceptionObstacles &perception_obstacles);
+  common::Status OnError(const std::string &error_msg);
+
+  void OnLocalization(const localization::LocalizationEstimate &localization);
+
+  void OnPlanning(const planning::ADCTrajectory &adc_trajectory);
+
+  bool IsValidTrajectoryPoint(
+      const ::apollo::common::TrajectoryPoint &trajectory_point);
+
+ private:
+  double start_time_ = 0.0;
+  PredictionConf prediction_conf_;
+  common::adapter::AdapterManagerConfig adapter_conf_;
 };
 
 }  // namespace prediction

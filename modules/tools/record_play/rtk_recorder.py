@@ -19,18 +19,18 @@
 Record GPS and IMU data
 """
 
+import atexit
+import logging
 import math
 import os
-import rospy
 import sys
-import tf
-from std_msgs.msg import String
+
+import rospy
 from gflags import FLAGS
-import logging
-import atexit
+
 from logger import Logger
-from modules.localization.proto import localization_pb2
 from modules.canbus.proto import chassis_pb2
+from modules.localization.proto import localization_pb2
 
 
 class RtkRecord(object):

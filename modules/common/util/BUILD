@@ -15,8 +15,11 @@ cc_library(
         "util.h",
     ],
     deps = [
+        ":string_util",
         "//modules/common/math",
+        "//modules/common/proto:pnc_point_proto",
         "//modules/common/time",
+        "//modules/perception/proto:perception_proto",
     ],
 )
 
@@ -29,6 +32,63 @@ cc_test(
     deps = [
         ":util",
         "@gtest//:main",
+    ],
+)
+
+cc_library(
+    name = "lru_cache",
+    hdrs = ["lru_cache.h"],
+)
+
+cc_library(
+    name = "ctpl_stl",
+    hdrs = ["ctpl_stl.h"],
+)
+
+cc_test(
+    name = "ctpl_stl_test",
+    size = "small",
+    srcs = [
+        "ctpl_stl_test.cc",
+    ],
+    deps = [
+        "//modules/common/util:ctpl_stl",
+        "@gtest//:main",
+    ],
+)
+
+cc_library(
+    name = "color",
+    hdrs = ["color.h"],
+)
+
+cc_library(
+    name = "string_util",
+    hdrs = [
+        "string_util.h",
+    ],
+    deps = [
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "string_util_test",
+    size = "small",
+    srcs = [
+        "string_util_test.cc",
+    ],
+    deps = [
+        ":string_util",
+        "@gtest//:main",
+    ],
+)
+
+cc_library(
+    name = "map_util",
+    hdrs = ["map_util.h"],
+    deps = [
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -68,6 +128,30 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "dropbox",
+    hdrs = [
+        "dropbox.h",
+    ],
+    deps = [
+        "//modules/common:log",
+    ],
+)
+
+cc_test(
+    name = "dropbox_test",
+    size = "small",
+    srcs = [
+        "dropbox_test.cc",
+    ],
+    deps = [
+        ":dropbox",
+        "//modules/common",
+        "//modules/common:log",
+        "@gtest//:main",
+    ],
+)
+
 cc_test(
     name = "file_test",
     size = "small",
@@ -81,6 +165,81 @@ cc_test(
         ":util",
         "//modules/common/util/testdata:simple_proto",
         "@gtest//:main",
+    ],
+)
+
+cc_test(
+    name = "lru_cache_test",
+    size = "small",
+    srcs = [
+        "lru_cache_test.cc",
+    ],
+    deps = [
+        "//modules/common/util:lru_cache",
+        "@gtest//:main",
+    ],
+)
+
+cc_library(
+    name = "points_downsampler",
+    hdrs = [
+        "points_downsampler.h",
+    ],
+    deps = [
+        "//modules/common:log",
+        "//modules/common/math:vec2d",
+    ],
+)
+
+cc_test(
+    name = "points_downsampler_test",
+    size = "small",
+    srcs = [
+        "points_downsampler_test.cc",
+    ],
+    deps = [
+        ":points_downsampler",
+        "@gtest//:main",
+    ],
+)
+
+cc_library(
+    name = "json_util",
+    srcs = [
+        "json_util.cc",
+    ],
+    hdrs = [
+        "json_util.h",
+    ],
+    deps = [
+        "//modules/common:log",
+        "//third_party/json",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "json_util_test",
+    size = "small",
+    srcs = [
+        "json_util_test.cc",
+    ],
+    deps = [
+        ":json_util",
+        "//modules/common/proto:error_code_proto",
+        "@gtest//:main",
+    ],
+)
+
+cc_library(
+    name = "http_client",
+    srcs = ["http_client.cc"],
+    hdrs = ["http_client.h"],
+    deps = [
+        "//modules/common:log",
+        "//modules/common/status",
+        "//third_party/json",
+        "@curlpp//:curlpp",
     ],
 )
 

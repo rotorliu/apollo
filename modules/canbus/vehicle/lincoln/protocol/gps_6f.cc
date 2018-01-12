@@ -16,11 +16,13 @@
 
 #include "modules/canbus/vehicle/lincoln/protocol/gps_6f.h"
 
-#include "modules/canbus/common/byte.h"
+#include "modules/drivers/canbus/common/byte.h"
 
 namespace apollo {
 namespace canbus {
 namespace lincoln {
+
+using ::apollo::drivers::canbus::Byte;
 
 const int32_t Gps6f::ID = 0x6F;
 
@@ -35,16 +37,16 @@ void Gps6f::Parse(const std::uint8_t *bytes, int32_t length,
   chassis_detail->mutable_basic()->set_vdop(vdop(bytes, length));
   switch (fix_quality(bytes, length)) {
     case 0:
-      chassis_detail->mutable_basic()->set_quality(BasicInfo::FIX_NO);
+      chassis_detail->mutable_basic()->set_quality(FIX_NO);
       break;
     case 1:
-      chassis_detail->mutable_basic()->set_quality(BasicInfo::FIX_2D);
+      chassis_detail->mutable_basic()->set_quality(FIX_2D);
       break;
     case 2:
-      chassis_detail->mutable_basic()->set_quality(BasicInfo::FIX_3D);
+      chassis_detail->mutable_basic()->set_quality(FIX_3D);
       break;
     default:
-      chassis_detail->mutable_basic()->set_quality(BasicInfo::FIX_INVALID);
+      chassis_detail->mutable_basic()->set_quality(FIX_INVALID);
       break;
   }
   chassis_detail->mutable_basic()->set_num_satellites(

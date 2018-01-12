@@ -3,26 +3,30 @@ load("//tools:cpplint.bzl", "cpplint")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "planning_impl",
+    name = "planning_lib",
     srcs = [
         "planning.cc",
-        "planning_node.cc",
     ],
-    hdrs = glob([
-        "*.h",
-    ]),
+    hdrs = [
+        "planning.h",
+        "planning_interface.h",
+    ],
     deps = [
         "//modules/common",
-        "//modules/common:log",
+        "//modules/common:apollo_app",
         "//modules/common/adapters:adapter_manager",
-        "//modules/common/proto:path_point_proto",
-        "//modules/common/util:factory",
-        "//modules/common/vehicle_state",
-        "//modules/decision/proto:decision_proto",
+        "//modules/common/configs:config_gflags",
+        "//modules/common/proto:pnc_point_proto",
+        "//modules/common/vehicle_state:vehicle_state_provider",
+        "//modules/map/hdmap:hdmap_util",
         "//modules/perception/proto:perception_proto",
-        "//modules/planning/common:lib_planning_common",
-        "//modules/planning/planner:lib_planner",
+        "//modules/planning/common:planning_common",
+        "//modules/planning/common:planning_thread_pool",
+        "//modules/planning/common/trajectory:trajectory_stitcher",
+        "//modules/planning/planner/em:em_planner",
+        "//modules/planning/planner/rtk:rtk_planner",
         "//modules/planning/proto:planning_proto",
+        "//modules/planning/reference_line:reference_line_provider",
         "//modules/prediction/proto:prediction_proto",
         "@ros//:ros_common",
     ],
@@ -32,24 +36,8 @@ cc_binary(
     name = "planning",
     srcs = ["main.cc"],
     deps = [
-        ":planning_impl",
+        ":planning_lib",
         "//external:gflags",
-    ],
-)
-
-cc_test(
-    name = "planning_test",
-    size = "small",
-    srcs = [
-        "planning_test.cc",
-    ],
-    data = ["//modules/planning:planning_testdata"],
-    deps = [
-        ":planning_impl",
-        "//modules/common:log",
-        "//modules/common/time",
-        "//modules/common/util",
-        "@gtest//:main",
     ],
 )
 
@@ -57,6 +45,13 @@ filegroup(
     name = "planning_testdata",
     srcs = glob([
         "testdata/**",
+    ]),
+)
+
+filegroup(
+    name = "planning_conf",
+    srcs = glob([
+        "conf/**",
     ]),
 )
 
